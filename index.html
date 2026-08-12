@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRIKE COMPOUND</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body { font-family: 'Arial Narrow', Arial, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #app canvas { display: block; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+    #overlay {
+      position: fixed; inset: 0; z-index: 20; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(8,10,8,0.55), rgba(0,0,0,0.9));
+      color: #cfd6c6; text-transform: uppercase; letter-spacing: 0.35em; user-select: none;
+    }
+    #overlay h1 { font-size: 42px; font-weight: 700; letter-spacing: 0.5em; text-shadow: 0 2px 18px rgba(0,0,0,0.8); }
+    #overlay h2 { font-size: 13px; margin-top: 10px; color: #8fa07e; }
+    #overlay .cta { margin-top: 46px; font-size: 16px; color: #e8e4d4; animation: pulse 2s infinite; }
+    #overlay .keys { margin-top: 26px; font-size: 11px; color: #6f7a66; letter-spacing: 0.2em; line-height: 1.9; text-align: center; }
+    #overlay.hidden { display: none; }
+    @keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud"></div>
+  <div id="overlay">
+    <h1>STRIKE COMPOUND</h1>
+    <h2>Operation Dustline &mdash; Tier One Deployment</h2>
+    <div class="cta">Click to Deploy</div>
+    <div class="keys">
+      WASD Move &nbsp;&middot;&nbsp; Shift Sprint &nbsp;&middot;&nbsp; Space Jump &nbsp;&middot;&nbsp; Mouse Aim<br/>
+      LMB Fire &nbsp;&middot;&nbsp; RMB Aim Down Sights &nbsp;&middot;&nbsp; R Reload &nbsp;&middot;&nbsp; G Grenade &nbsp;&middot;&nbsp; 1/2 Weapons
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

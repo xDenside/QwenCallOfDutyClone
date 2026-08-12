@@ -1,0 +1,22 @@
+{
+  "name": "strike-compound",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "capture": "node tools/capture.mjs"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.6.0",
+    "vite": "^8.2.1"
+  },
+  "allowScripts": {
+    "puppeteer@25.6.0": true
+  }
+}
