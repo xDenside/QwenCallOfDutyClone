@@ -32,6 +32,25 @@ export function makeValueNoise(seed) {
   };
 }
 
+/**
+ * Tileable 2D value noise: the integer lattice wraps every `px`/`py` cells, so
+ * noise(u * fx, v * fy, fx, fy) tiles seamlessly across u,v in [0,1) for integer fx,fy.
+ */
+export function makeValueNoiseTiled(seed) {
+  const s = seed | 0;
+  return function (x, y, px, py = px) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = x - ix, fy = y - iy;
+    const p = (px | 0) || 1, q = (py | 0) || 1;
+    const x0 = ((ix % p) + p) % p, y0 = ((iy % q) + q) % q;
+    const x1 = (x0 + 1) % p, y1 = (y0 + 1) % q;
+    const a = hash2(x0, y0, s), b = hash2(x1, y0, s);
+    const c = hash2(x0, y1, s), d = hash2(x1, y1, s);
+    const u = smooth(fx), v = smooth(fy);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+}
+
 /** Fractal brownian motion, [0,1]. */
 export function makeFbm(seed, octaves = 4) {
   const n = makeValueNoise(seed);

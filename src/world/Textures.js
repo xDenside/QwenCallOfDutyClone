@@ -1,7 +1,24 @@
 // Procedural PBR texture sets, painted on offscreen canvases (<=1024^2).
 // Every albedo has matching roughness variation + a normal map where it helps.
 import * as THREE from 'three';
-import { makeFbm, makeValueNoise, mulberry32, clamp, smoothstep } from './Noise.js';
+import { makeValueNoiseTiled, mulberry32, clamp, smoothstep } from './Noise.js';
+
+// Noise sampled in UV space with integer frequencies => seamless texture tiles.
+function makeTValue(seed) {
+  const n = makeValueNoiseTiled(seed);
+  return (u, v, fx, fy = fx) => n(u * fx, v * fy, fx | 0, fy | 0);
+}
+function makeTFbm(seed, octaves = 4) {
+  const n = makeValueNoiseTiled(seed);
+  return (u, v, fx, fy = fx) => {
+    let amp = 0.5, frx = fx | 0, fry = fy | 0, sum = 0, tot = 0;
+    for (let i = 0; i < octaves; i++) {
+      sum += amp * n(u * frx, v * fry, frx, fry);
+      tot += amp; amp *= 0.5; frx *= 2; fry *= 2;
+    }
+    return sum / tot;
+  };
+}
 
 function cnv(w, h) {
   const c = document.createElement('canvas');
@@ -90,18 +107,19 @@ function buildSet(renderer, size, fn, opts = {}) {
 
 function genConcrete(renderer) {
   const size = 1024;
-  const fbm = makeFbm(11, 4);
-  const hi = makeValueNoise(29);
+  const fbm = makeTFbm(11, 4);
+  const hi = makeTValue(29);
   const rnd = mulberry32(77);
-  // per-column drip streak strengths from every seam
+  // per-column drip streak strengths (tileable: columns 0 and size-1 are neighbors,
+  // each column is independent so the wrap introduces no visible seam)
   const drip = new Float32Array(size);
   for (let x = 0; x < size; x++) drip[x] = rnd() < 0.055 ? 0.35 + rnd() * 0.65 : 0;
-  const seam = 170; // px between pour seams
+  const seam = 128; // px between pour seams (divides 1024 -> seamless)
 
   const set = buildSet(renderer, size, (u, v, o) => {
     const px = u * size, py = v * size;
-    const big = fbm(u * 5.2, v * 5.2);
-    const stain = fbm(u * 2.3 + 7.7, v * 2.6 + 3.1);
+    const big = fbm(u, v, 5);
+    const stain = fbm(u + 0.77, v + 0.31, 3);
     let r = 178, g = 170, b = 152;
     const shade = (big - 0.5) * 34;
     r += shade; g += shade * 0.97; b += shade * 0.9;
@@ -111,7 +129,7 @@ function genConcrete(renderer) {
     const st = smoothstep(0.58, 0.85, stain);
     r -= st * 46; g -= st * 42; b -= st * 34;
     // pores
-    const pore = hi(u * 220, v * 220);
+    const pore = hi(u, v, 220);
     let h = 0.5 + (big - 0.5) * 0.12;
     if (pore > 0.93) { r -= 26; g -= 26; b -= 24; h -= 0.22; }
     else if (pore < 0.05) { r += 8; g += 8; b += 8; }
@@ -126,27 +144,27 @@ function genConcrete(renderer) {
       }
     }
     o.r = r; o.g = g; o.b = b; o.h = h;
-    o.rough = 196 + st * 34 + (hi(u * 40, v * 40) - 0.5) * 36 - (big > 0.62 ? 14 : 0);
+    o.rough = 196 + st * 34 + (hi(u, v, 40) - 0.5) * 36 - (big > 0.62 ? 14 : 0);
   }, { normalStrength: 2.0, aniso: 8 });
   return set;
 }
 
 function genTin(renderer) {
-  const size = 1024;
-  const fbm = makeFbm(41, 4);
-  const dust = makeFbm(53, 3);
-  const corr = 26; // px per corrugation
+  const size = 512;
+  const fbm = makeTFbm(41, 4);
+  const dust = makeTFbm(53, 3);
+  const corr = 16; // corrugations per tile (integer -> seamless)
   const set = buildSet(renderer, size, (u, v, o) => {
-    const wave = Math.cos(u * size / corr * Math.PI * 2);
+    const wave = Math.cos(u * corr * Math.PI * 2);
     const lit = 0.78 + 0.22 * wave;
     let r = 118 * lit, g = 116 * lit, b = 86 * lit;
-    const grunge = fbm(u * 7, v * 7);
+    const grunge = fbm(u, v, 7);
     // olive drab paint variation
     r += (grunge - 0.5) * 26; g += (grunge - 0.5) * 24; b += (grunge - 0.5) * 14;
     let h = 0.5 + wave * 0.34;
     let rough = 148 + (grunge - 0.5) * 50;
     // rust, stronger toward sheet bottoms and where paint fails
-    const rustSeed = fbm(u * 9.5 + 3.3, v * 9.5);
+    const rustSeed = fbm(u + 0.33, v + 0.71, 10);
     const rustBias = smoothstep(0.55, 1, v) * 0.16;
     const rust = smoothstep(0.60, 0.78, rustSeed + rustBias);
     if (rust > 0) {
@@ -154,13 +172,13 @@ function genTin(renderer) {
       h -= rust * 0.2;
       rough += rust * 80;
     }
-    // bright scratches down to bare metal
-    const scratch = fbm(u * 90, v * 6);
-    if (scratch > 0.74 && Math.abs(Math.sin(v * size * 0.7)) > 0.75) {
+    // bright scratches down to bare metal (vertical streaks)
+    const scratch = fbm(u, v, 90, 6);
+    if (scratch > 0.74 && Math.abs(Math.sin(v * Math.PI * 2 * 57)) > 0.75) {
       r += 46; g += 46; b += 40; rough -= 55;
     }
     // dust film on upward-facing profile ridges
-    const d = dust(u * 4 + 9, v * 4);
+    const d = dust(u + 0.9, v, 4);
     if (wave > 0.55 && d > 0.52) {
       const k = (d - 0.52) * 1.4;
       r += k * 52; g += k * 44; b += k * 30; rough += k * 40;
@@ -172,41 +190,43 @@ function genTin(renderer) {
 
 function genDirt(renderer) {
   const size = 1024;
-  const fbm = makeFbm(101, 4);
-  const gravel = makeValueNoise(211);
-  const fine = makeValueNoise(307);
+  const fbm = makeTFbm(101, 4);
+  const gravel = makeTValue(211);
+  const fine = makeTValue(307);
   const set = buildSet(renderer, size, (u, v, o) => {
-    const big = fbm(u * 4.1, v * 4.1);
-    const mid = fbm(u * 14 + 5, v * 14);
+    const big = fbm(u, v, 4);
+    const mid = fbm(u + 0.35, v, 14);
     let r = 152, g = 131, b = 101;
     const shade = (big - 0.5) * 44 + (mid - 0.5) * 20;
     r += shade; g += shade * 0.94; b += shade * 0.85;
     let h = 0.5 + (big - 0.5) * 0.3;
     // gravel speckle
-    const gr = gravel(u * 340, v * 340);
+    const gr = gravel(u, v, 340);
     if (gr > 0.9) { r += 34; g += 30; b += 24; h += 0.16; }
     else if (gr < 0.07) { r -= 30; g -= 28; b -= 22; h -= 0.14; }
     // hairline desiccation cracks
-    const ck = Math.abs(fine(u * 46, v * 46) - 0.5);
+    const ck = Math.abs(fine(u, v, 46) - 0.5);
     if (ck < 0.013) { r -= 34; g -= 32; b -= 26; h -= 0.3; }
     o.r = r; o.g = g; o.b = b; o.h = h;
-    o.rough = 226 + (fine(u * 22, v * 22) - 0.5) * 40 - (gr > 0.9 ? 18 : 0);
+    o.rough = 226 + (fine(u, v, 22) - 0.5) * 40 - (gr > 0.9 ? 18 : 0);
   }, { normalStrength: 1.5, aniso: 8 });
   return set;
 }
 
 function genPlanks(renderer) {
-  const size = 1024;
-  const fbm = makeFbm(401, 4);
-  const grain = makeValueNoise(501);
+  const size = 512;
+  const fbm = makeTFbm(401, 4);
+  const grain = makeTValue(501);
   const rows = 6;
+  const rowTint = mulberry32(555);
+  const tints = Array.from({ length: rows }, () => (rowTint() - 0.5) * 30);
   const set = buildSet(renderer, size, (u, v, o) => {
     const row = Math.floor(v * rows);
     const lv = v * rows - row;
-    const tint = (grain(row * 13.7, 0.5) - 0.5) * 30;
+    const tint = tints[row];
     // stretched grain streaks along u
-    const g1 = fbm(u * 3 + row * 17.3, v * 46);
-    const g2 = grain(u * 8 + row * 7.7, v * 160);
+    const g1 = fbm(u + row * 5.77, v, 3, 46);
+    const g2 = grain(u + row * 0.96, v, 8, 160);
     let r = 141 + tint, g = 110 + tint * 0.8, b = 74 + tint * 0.5;
     const streak = smoothstep(0.42, 0.3, g1) * 26 + smoothstep(0.8, 0.95, g2) * 12;
     r -= streak; g -= streak * 1.05; b -= streak * 0.9;
@@ -224,14 +244,14 @@ function genPlanks(renderer) {
 
 function genCrate(renderer) {
   const size = 512;
-  const fbm = makeFbm(601, 4);
-  const grain = makeValueNoise(701);
+  const fbm = makeTFbm(601, 4);
+  const grain = makeTValue(701);
   const rnd = mulberry32(901);
   const nails = [];
   for (let i = 0; i < 14; i++) nails.push([0.05 + rnd() * 0.9, 0.05 + rnd() * 0.9]);
   const set = buildSet(renderer, size, (u, v, o) => {
-    const g1 = fbm(u * 3.2, v * 34);
-    const g2 = grain(u * 9, v * 120);
+    const g1 = fbm(u, v, 3, 34);
+    const g2 = grain(u, v, 9, 120);
     let r = 132, g = 106, b = 70;
     const streak = smoothstep(0.4, 0.28, g1) * 24;
     r -= streak; g -= streak; b -= streak * 0.8;
@@ -243,7 +263,7 @@ function genCrate(renderer) {
     if (bat) { r -= 26; g -= 24; b -= 18; h += 0.2; }
     // stencil ghosting (dark worn paint block)
     if (u > 0.28 && u < 0.72 && v > 0.3 && v < 0.42) {
-      const wob = grain(u * 60, v * 60);
+      const wob = grain(u, v, 60);
       if (wob > 0.35) { r -= 34; g -= 30; b -= 22; rough += 14; }
     }
     // nail heads
@@ -261,20 +281,20 @@ function genCrate(renderer) {
 
 function genSandbag(renderer) {
   const size = 512;
-  const fbm = makeFbm(801, 4);
+  const fbm = makeTFbm(801, 4);
   const set = buildSet(renderer, size, (u, v, o) => {
     const weaveU = Math.sin(u * Math.PI * 2 * 44);
     const weaveV = Math.sin(v * Math.PI * 2 * 44);
     const w = weaveU * weaveV;
     let r = 179, g = 162, b = 124;
-    const blotch = fbm(u * 3.4 + 2, v * 3.4);
+    const blotch = fbm(u + 0.2, v, 3);
     r += (blotch - 0.5) * 40; g += (blotch - 0.5) * 36; b += (blotch - 0.5) * 26;
     r += w * 12; g += w * 11; b += w * 8;
     // dirt staining on lower courses
-    const dirt = smoothstep(0.5, 1, v) * fbm(u * 6, v * 6) * 0.6;
+    const dirt = smoothstep(0.5, 1, v) * fbm(u, v, 6) * 0.6;
     r -= dirt * 60; g -= dirt * 56; b -= dirt * 44;
     o.r = r; o.g = g; o.b = b;
-    o.h = 0.5 + w * 0.3 + (fbm(u * 20, v * 20) - 0.5) * 0.1;
+    o.h = 0.5 + w * 0.3 + (fbm(u, v, 20) - 0.5) * 0.1;
     o.rough = 236 + w * 8 - dirt * 20;
   }, { normalStrength: 3.0, aniso: 2 });
   return set;
@@ -282,44 +302,44 @@ function genSandbag(renderer) {
 
 function genRubber(renderer) {
   const size = 512;
-  const fbm = makeFbm(950, 4);
-  const crack = makeValueNoise(960);
+  const fbm = makeTFbm(950, 4);
+  const crack = makeTValue(960);
   const set = buildSet(renderer, size, (u, v, o) => {
-    const n = fbm(u * 6, v * 6);
+    const n = fbm(u, v, 6);
     let r = 34, g = 34, b = 37;
     r += (n - 0.5) * 16; g += (n - 0.5) * 16; b += (n - 0.5) * 16;
     let h = 0.5 + (n - 0.5) * 0.14;
     // cracking veins
-    const c = Math.abs(crack(u * 26, v * 26) - 0.5);
+    const c = Math.abs(crack(u, v, 26) - 0.5);
     if (c < 0.011) { r += 20; g += 20; b += 22; h -= 0.24; }
     // grey scuffing
-    const scuff = fbm(u * 15 + 4, v * 15);
+    const scuff = fbm(u + 0.4, v, 15);
     if (scuff > 0.66) { r += 26; g += 26; b += 26; }
     o.r = r; o.g = g; o.b = b; o.h = h;
-    o.rough = 232 + (crack(u * 12, v * 12) - 0.5) * 20;
+    o.rough = 232 + (crack(u, v, 12) - 0.5) * 20;
   }, { normalStrength: 2.2, aniso: 2 });
   return set;
 }
 
 function genPaintedMetal(renderer) {
-  const size = 1024;
-  const fbm = makeFbm(1100, 4);
-  const scratch = makeValueNoise(1200);
+  const size = 512;
+  const fbm = makeTFbm(1100, 4);
+  const scratch = makeTValue(1200);
   const set = buildSet(renderer, size, (u, v, o) => {
-    const n = fbm(u * 6, v * 6);
+    const n = fbm(u, v, 6);
     let r = 94, g = 98, b = 72; // olive drab
     r += (n - 0.5) * 30; g += (n - 0.5) * 30; b += (n - 0.5) * 22;
     let h = 0.5 + (n - 0.5) * 0.1;
     let rough = 158 + (n - 0.5) * 40;
     // rust bloom
-    const rust = smoothstep(0.62, 0.8, fbm(u * 10 + 7, v * 10));
+    const rust = smoothstep(0.62, 0.8, fbm(u + 0.7, v, 10));
     if (rust > 0) {
       r += (122 - r) * rust; g += (66 - g) * rust; b += (38 - b) * rust;
       rough += rust * 70; h -= rust * 0.16;
     }
     // scratches to bright metal
-    const s = scratch(u * 70, v * 8);
-    if (s > 0.78 && scratch(u * 9, v * 70) > 0.55) {
+    const s = scratch(u, v, 70, 8);
+    if (s > 0.78 && scratch(u, v, 9, 70) > 0.55) {
       r += 52; g += 52; b += 46; rough -= 60;
     }
     // dust settling on lower band
@@ -501,6 +521,7 @@ export function createMaterials(renderer) {
     concrete: std(concrete, { normalScale: new THREE.Vector2(0.75, 0.75), vertexColors: true }),
     tin: std(tin, { metalness: 0.5, normalScale: new THREE.Vector2(1.5, 0.7) }),
     dirt: std(dirt, { normalScale: new THREE.Vector2(0.6, 0.6), vertexColors: true }),
+    rock: std(dirt, { normalScale: new THREE.Vector2(0.9, 0.9) }),
     planks: std(planks, { normalScale: new THREE.Vector2(0.9, 0.9) }),
     crate: std(crate, { normalScale: new THREE.Vector2(1.0, 1.0) }),
     sandbag: std(sandbag, { normalScale: new THREE.Vector2(1.1, 1.1) }),
@@ -514,6 +535,7 @@ export function createMaterials(renderer) {
       color: 0xb5a05a, roughness: 0.96, metalness: 0, side: THREE.DoubleSide
     }),
     mountain: new THREE.MeshBasicMaterial({ vertexColors: true, fog: true }),
+    skirt: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }),
     brass: new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.92, roughness: 0.32 }),
     decal: new THREE.MeshStandardMaterial({
       map: tex(genGroundDecal(), renderer, { srgb: true, repeat: false }),

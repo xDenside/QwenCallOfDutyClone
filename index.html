@@ -5,36 +5,353 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>STRIKE COMPOUND</title>
   <style>
+    :root {
+      --c-text:  #e7e4d8;   /* bone white */
+      --c-dim:   #aeb2a0;   /* muted sage */
+      --c-faint: #7c8171;   /* faded olive */
+      --c-red:   #ff5040;   /* hitmarker / damage red */
+      --c-warm:  #ff8a5e;   /* low-ammo warm red */
+      --font-hud: 'Arial Narrow', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-    body { font-family: 'Arial Narrow', Arial, sans-serif; }
+    body {
+      font-family: var(--font-hud);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
     #app { position: fixed; inset: 0; }
     #app canvas { display: block; }
-    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-    #overlay {
-      position: fixed; inset: 0; z-index: 20; cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(ellipse at center, rgba(8,10,8,0.55), rgba(0,0,0,0.9));
-      color: #cfd6c6; text-transform: uppercase; letter-spacing: 0.35em; user-select: none;
+
+    /* ================= HUD root ================= */
+    #hud {
+      position: fixed; inset: 0; z-index: 10;
+      pointer-events: none; overflow: hidden;
+      color: var(--c-text);
+      font-family: var(--font-hud);
     }
-    #overlay h1 { font-size: 42px; font-weight: 700; letter-spacing: 0.5em; text-shadow: 0 2px 18px rgba(0,0,0,0.8); }
-    #overlay h2 { font-size: 13px; margin-top: 10px; color: #8fa07e; }
-    #overlay .cta { margin-top: 46px; font-size: 16px; color: #e8e4d4; animation: pulse 2s infinite; }
-    #overlay .keys { margin-top: 26px; font-size: 11px; color: #6f7a66; letter-spacing: 0.2em; line-height: 1.9; text-align: center; }
-    #overlay.hidden { display: none; }
-    @keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+    /* furniture dims while dead */
+    #hud .hud-br, #hud .compass-wrap, #hud .killfeed { transition: opacity .45s ease; }
+    #hud.dead .hud-br, #hud.dead .compass-wrap, #hud.dead .killfeed { opacity: .12; }
+
+    /* ---- full-screen layers ---- */
+    #hud .layer { position: absolute; inset: 0; opacity: 0; will-change: opacity; }
+    #hud .vignette {
+      opacity: .5;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 52%, rgba(0,0,0,.36) 100%);
+    }
+    #hud .hurt {
+      background: radial-gradient(ellipse at center,
+        rgba(0,0,0,0) 30%, rgba(52,8,3,.6) 72%, rgba(30,3,1,.92) 100%);
+    }
+    #hud .flash {
+      background: radial-gradient(ellipse at center,
+        rgba(168,20,8,0) 26%, rgba(168,20,8,.5) 76%, rgba(110,10,4,.75) 100%);
+    }
+    #hud .regen {
+      background: radial-gradient(ellipse at center,
+        rgba(0,0,0,0) 54%, rgba(216,230,238,.22) 100%);
+    }
+    #hud .regen.on { animation: hudBreathe 2.3s ease-in-out infinite; }
+    @keyframes hudBreathe { 0%, 100% { opacity: .3; } 50% { opacity: .8; } }
+
+    /* ---- crosshair ---- */
+    #hud .xh { position: absolute; left: 50%; top: 50%; width: 0; height: 0; will-change: opacity; }
+    #hud .xh i {
+      position: absolute; left: 0; top: 0;
+      background: rgba(235,232,220,.94);
+      box-shadow: 0 0 2px rgba(0,0,0,.9), 0 0 5px rgba(0,0,0,.45);
+    }
+    #hud .xh .t, #hud .xh .b { width: 2px; height: 9px; }
+    #hud .xh .l, #hud .xh .r { width: 9px; height: 2px; }
+    #hud .xh-dot {
+      position: absolute; left: -1px; top: -1px; width: 2px; height: 2px;
+      background: rgba(235,232,220,.95);
+      box-shadow: 0 0 2px rgba(0,0,0,.9);
+    }
+
+    /* ---- hitmarker ---- */
+    #hud .hm { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; will-change: transform, opacity; }
+    #hud .hm i {
+      position: absolute; left: -1px; top: -5px; width: 2px; height: 10px;
+      background: #f3f0e4;
+      box-shadow: 0 0 3px rgba(0,0,0,.7);
+    }
+    #hud .hm i:nth-child(1) { transform: rotate(45deg)  translateY(-11px); }
+    #hud .hm i:nth-child(2) { transform: rotate(135deg) translateY(-11px); }
+    #hud .hm i:nth-child(3) { transform: rotate(225deg) translateY(-11px); }
+    #hud .hm i:nth-child(4) { transform: rotate(315deg) translateY(-11px); }
+    #hud .hm.hm-red i { background: var(--c-red); box-shadow: 0 0 6px rgba(255,64,44,.55); }
+
+    /* ---- compass + objective ---- */
+    #hud .compass-wrap {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      width: 400px; text-align: center;
+    }
+    #hud .compass {
+      position: relative; height: 32px; overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+    }
+    #hud .compass-track { position: absolute; left: 0; top: 0; height: 100%; will-change: transform; }
+    #hud .ck { position: absolute; top: 23px; width: 1px; height: 4px; background: rgba(226,223,208,.42); }
+    #hud .ck.maj { top: 20px; height: 7px; background: rgba(226,223,208,.7); }
+    #hud .cl {
+      position: absolute; top: 2px; transform: translateX(-50%);
+      font-size: 13px; font-weight: 700; letter-spacing: .06em; color: #e9e6da;
+      text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    }
+    #hud .cl.minor { top: 6px; font-size: 9px; font-weight: 400; letter-spacing: .12em; color: var(--c-dim); }
+    #hud .cl.num   { top: 8px; font-size: 8px; font-weight: 400; letter-spacing: .05em; color: rgba(174,178,160,.75); }
+    #hud .compass-caret {
+      position: absolute; left: 50%; top: 0; width: 1px; height: 100%;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(233,230,218,.9), rgba(233,230,218,.12));
+    }
+    #hud .compass-caret::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      border: 4px solid transparent; border-top-color: #e9e6da;
+    }
+    #hud .obj-head {
+      margin-top: 3px; font-size: 9px; letter-spacing: .42em; text-indent: .42em;
+      color: #8b9078; text-transform: uppercase;
+    }
+    #hud .objective {
+      margin-top: 3px; font-size: 12.5px; font-weight: 600;
+      letter-spacing: .24em; text-indent: .24em; text-transform: uppercase;
+      color: #dcddd0; text-shadow: 0 1px 3px rgba(0,0,0,.75);
+    }
+
+    /* ---- kill feed ---- */
+    #hud .killfeed {
+      position: absolute; top: 14px; right: 16px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+    }
+    #hud .kf-row {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11.5px; letter-spacing: .14em; color: #e2dfd2;
+      padding: 5px 9px 5px 14px;
+      background: linear-gradient(270deg, rgba(12,13,9,.55), rgba(12,13,9,0));
+      border-right: 2px solid rgba(230,227,212,.75);
+      opacity: 0; transform: translateX(16px);
+      transition: opacity .28s ease, transform .28s cubic-bezier(.2,.7,.3,1);
+    }
+    #hud .kf-row.in  { opacity: 1; transform: none; }
+    #hud .kf-row.out { opacity: 0; transform: translateX(8px); transition: opacity .4s ease, transform .4s ease; }
+    #hud .kf-you   { color: #efecdf; font-weight: 700; }
+    #hud .kf-x     { color: #ff5b49; font-weight: 700; font-size: 10px; }
+    #hud .kf-enemy { color: #e2dfd2; }
+    #hud .kf-w     { color: #9ba08d; font-size: 10.5px; }
+
+    /* ---- bottom-right cluster: grenade hint + ammo ---- */
+    #hud .hud-br {
+      position: absolute; right: 20px; bottom: 18px;
+      display: flex; align-items: flex-end; gap: 14px;
+    }
+    #hud .nade {
+      position: relative; width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(222,219,204,.28); border-radius: 4px;
+      background: rgba(10,11,8,.35);
+    }
+    #hud .nade-key { font-size: 13px; font-weight: 700; color: #cfccbd; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+    #hud .nade-pip {
+      position: absolute; left: 4px; right: 4px; bottom: 3px; height: 2px;
+      background: rgba(222,219,204,.8); transform-origin: left center; transform: scaleX(0);
+    }
+    #hud .nade.cd .nade-key { color: #6f7365; }
+    #hud .nade.empty { opacity: .45; }
+
+    #hud .ammo { text-align: right; min-width: 130px; }
+    #hud .ammo-name {
+      font-size: 10.5px; letter-spacing: .34em; text-transform: uppercase;
+      color: #b3b7a2; margin-bottom: 1px; text-shadow: 0 1px 2px rgba(0,0,0,.7);
+    }
+    #hud .ammo-count {
+      display: flex; align-items: baseline; justify-content: flex-end; gap: 8px;
+      text-shadow: 0 1px 4px rgba(0,0,0,.75);
+    }
+    #hud .ammo-count .mag {
+      font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: .01em;
+      color: #efecdf; font-variant-numeric: tabular-nums;
+    }
+    #hud .ammo-count .sep { font-size: 20px; font-weight: 300; color: rgba(210,207,192,.45); }
+    #hud .ammo-count .reserve {
+      font-size: 19px; font-weight: 600; color: #b3b7a2; font-variant-numeric: tabular-nums;
+    }
+    #hud .ammo.low .mag { color: var(--c-warm); animation: lowPulse .9s ease-in-out infinite; }
+    #hud .ammo.dry .ammo-count { opacity: .55; }
+    @keyframes lowPulse {
+      0%, 100% { opacity: 1;   text-shadow: 0 0 10px rgba(255,110,70,.28); }
+      50%      { opacity: .55; text-shadow: 0 0 2px rgba(255,110,70,.1); }
+    }
+    #hud .reload {
+      display: flex; align-items: center; justify-content: flex-end; gap: 7px;
+      margin-top: 4px; opacity: 0; transition: opacity .18s ease;
+    }
+    #hud .ammo.reloading .reload { opacity: 1; }
+    #hud .reload-label {
+      font-size: 9.5px; letter-spacing: .36em; color: #c9c6b4;
+      animation: reloadBlink 1s ease-in-out infinite;
+    }
+    #hud .reload-bar { position: relative; width: 74px; height: 2px; background: rgba(210,207,192,.18); overflow: hidden; }
+    #hud .reload-bar::after {
+      content: ''; position: absolute; inset: 0; width: 40%; background: #d8d5c4;
+      animation: reloadSweep 1s cubic-bezier(.45,.1,.45,.9) infinite;
+    }
+    @keyframes reloadSweep { from { transform: translateX(-110%); } to { transform: translateX(280%); } }
+    @keyframes reloadBlink { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+    /* ---- directional damage indicator ---- */
+    #hud .dmgdir { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; will-change: opacity; }
+    #hud .dmgdir-rot { position: absolute; left: 0; top: 0; will-change: transform; }
+    #hud .dmgdir-chev {
+      position: absolute; left: -36px; top: -124px;
+      color: rgba(255,72,50,.9);
+      filter: drop-shadow(0 0 6px rgba(255,60,40,.45));
+    }
+    #hud .dmgdir-chev svg { display: block; }
+    #hud .dmgdir-chev path { stroke: currentColor; }
+
+    /* ---- death screen ---- */
+    #hud .death {
+      position: absolute; inset: 0; opacity: 0; visibility: hidden;
+      transition: opacity .45s ease, visibility 0s linear .45s;
+    }
+    #hud .death.on { opacity: 1; visibility: visible; transition: opacity .45s ease; }
+    #hud .death-tint {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(14,10,7,.42) 20%, rgba(8,5,3,.82) 100%);
+      -webkit-backdrop-filter: grayscale(.94) brightness(.68) contrast(1.04);
+              backdrop-filter: grayscale(.94) brightness(.68) contrast(1.04);
+    }
+    #hud .death-core {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #hud .kia {
+      font-size: 58px; font-weight: 700; letter-spacing: .46em; text-indent: .46em;
+      color: #e8e3d3;
+      text-shadow: 0 0 22px rgba(200,40,20,.55), 0 2px 6px rgba(0,0,0,.8);
+    }
+    #hud .death.on .kia { animation: kiaIn .65s cubic-bezier(.15,.85,.3,1) both; }
+    @keyframes kiaIn {
+      from { opacity: 0; letter-spacing: .85em; filter: blur(8px); }
+      to   { opacity: 1; letter-spacing: .46em; filter: blur(0); }
+    }
+    #hud .death-count {
+      margin-top: 20px; font-size: 13.5px; letter-spacing: .3em; text-indent: .3em;
+      color: #c4c1ae; animation: countPulse 1s ease-in-out infinite;
+    }
+    @keyframes countPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    #hud .death-sub { margin-top: 9px; font-size: 9.5px; letter-spacing: .4em; text-indent: .4em; color: #8b9078; text-transform: uppercase; }
+
+    /* ================= Start overlay (AAA restyle) ================= */
+    #overlay {
+      position: fixed; inset: 0; z-index: 20; cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: var(--c-text); font-family: var(--font-hud); text-transform: uppercase;
+      background:
+        radial-gradient(ellipse 120% 90% at 50% 28%, rgba(46,40,26,.38), rgba(5,5,4,.95) 78%),
+        repeating-linear-gradient(115deg, rgba(255,255,255,.014) 0 2px, rgba(0,0,0,0) 2px 6px),
+        #0a0a08;
+      transition: opacity .35s ease, visibility .35s ease;
+    }
+    #overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    #overlay .ov-frame { position: absolute; inset: 26px; pointer-events: none; }
+    #overlay .fc { position: absolute; width: 26px; height: 26px; border: 1px solid rgba(214,210,190,.22); }
+    #overlay .fc.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    #overlay .fc.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    #overlay .fc.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    #overlay .fc.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    #overlay .ov-col { display: flex; flex-direction: column; align-items: center; max-width: 720px; padding: 0 24px; }
+    #overlay .ov-insignia { width: 104px; height: 104px; color: #c9c5b2; opacity: .92; filter: drop-shadow(0 0 14px rgba(214,200,150,.12)); }
+    #overlay .ov-overline {
+      margin-top: 22px; font-size: 10px; letter-spacing: .5em; text-indent: .5em; color: #8f947c;
+    }
+    #overlay h1 {
+      margin-top: 12px;
+      font-size: clamp(34px, 5.4vw, 56px); font-weight: 700; line-height: 1.05;
+      letter-spacing: .44em; text-indent: .44em; color: #ebe7d8;
+      text-shadow: 0 2px 24px rgba(0,0,0,.85), 0 0 60px rgba(196,158,74,.1);
+    }
+    #overlay .ov-rule { display: flex; align-items: center; gap: 12px; margin-top: 18px; width: 340px; }
+    #overlay .ov-rule i {
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(214,211,193,.45), transparent);
+    }
+    #overlay .ov-rule b {
+      width: 5px; height: 5px; background: rgba(214,211,193,.6);
+      transform: rotate(45deg); flex: none;
+    }
+    #overlay .ov-sitrep {
+      margin-top: 16px; font-size: 11px; letter-spacing: .22em; text-indent: .22em; color: #9aa08e;
+    }
+    #overlay .cta {
+      position: relative; margin-top: 42px; padding: 13px 40px;
+      font-size: 13px; letter-spacing: .44em; text-indent: .44em; color: #efeadd;
+      border: 1px solid rgba(214,210,190,.32); background: rgba(20,20,14,.35);
+      animation: ctaPulse 2.4s ease-in-out infinite;
+    }
+    #overlay .cta::before, #overlay .cta::after { content: ''; position: absolute; width: 9px; height: 9px; }
+    #overlay .cta::before { top: -1px; left: -1px; border-top: 2px solid rgba(233,230,218,.8); border-left: 2px solid rgba(233,230,218,.8); }
+    #overlay .cta::after  { bottom: -1px; right: -1px; border-bottom: 2px solid rgba(233,230,218,.8); border-right: 2px solid rgba(233,230,218,.8); }
+    @keyframes ctaPulse {
+      0%, 100% { opacity: .62; box-shadow: 0 0 0 rgba(214,200,150,0); }
+      50%      { opacity: 1;   box-shadow: 0 0 22px rgba(214,200,150,.14); }
+    }
+    #overlay .keys {
+      margin-top: 36px; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 9px 24px; max-width: 660px;
+    }
+    #overlay .kv {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; letter-spacing: .22em; color: #7f8570;
+    }
+    #overlay .kv b {
+      display: inline-block; padding: 3px 8px; min-width: 26px; text-align: center;
+      border: 1px solid rgba(212,208,188,.3); border-radius: 3px;
+      background: rgba(230,226,206,.06);
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,.35);
+      font-size: 10px; font-weight: 700; letter-spacing: .14em; color: #d6d3c2;
+    }
   </style>
 </head>
 <body>
   <div id="app"></div>
   <div id="hud"></div>
   <div id="overlay">
-    <h1>STRIKE COMPOUND</h1>
-    <h2>Operation Dustline &mdash; Tier One Deployment</h2>
-    <div class="cta">Click to Deploy</div>
-    <div class="keys">
-      WASD Move &nbsp;&middot;&nbsp; Shift Sprint &nbsp;&middot;&nbsp; Space Jump &nbsp;&middot;&nbsp; Mouse Aim<br/>
-      LMB Fire &nbsp;&middot;&nbsp; RMB Aim Down Sights &nbsp;&middot;&nbsp; R Reload &nbsp;&middot;&nbsp; G Grenade &nbsp;&middot;&nbsp; 1/2 Weapons
+    <div class="ov-frame">
+      <i class="fc tl"></i><i class="fc tr"></i><i class="fc bl"></i><i class="fc br"></i>
+    </div>
+    <div class="ov-col">
+      <svg class="ov-insignia" viewBox="-50 -50 100 100" fill="none" aria-hidden="true">
+        <circle cx="0" cy="0" r="45" stroke="currentColor" stroke-width="1" opacity=".45"/>
+        <circle cx="0" cy="0" r="36" stroke="currentColor" stroke-width=".75" stroke-dasharray="2 5" opacity=".6"/>
+        <path d="M0 -20 L5 -6.9 L19 -6.2 L8.1 2.6 L11.8 16.2 L0 8.5 L-11.8 16.2 L-8.1 2.6 L-19 -6.2 L-5 -6.9 Z"
+              stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity=".9"/>
+        <path d="M-15 27 L0 35 L15 27" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+        <path d="M-11 33 L0 39 L11 33" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".45"/>
+      </svg>
+      <div class="ov-overline">Operation Dustline &mdash; Tier One Deployment</div>
+      <h1>STRIKE COMPOUND</h1>
+      <div class="ov-rule"><i></i><b></b><i></i></div>
+      <div class="ov-sitrep">Hostile presence confirmed &mdash; clear the compound</div>
+      <div class="cta">Click to Deploy</div>
+      <div class="keys">
+        <span class="kv"><b>W A S D</b>Move</span>
+        <span class="kv"><b>SHIFT</b>Sprint</span>
+        <span class="kv"><b>SPACE</b>Jump</span>
+        <span class="kv"><b>MOUSE</b>Aim</span>
+        <span class="kv"><b>LMB</b>Fire</span>
+        <span class="kv"><b>RMB</b>Aim Down Sights</span>
+        <span class="kv"><b>R</b>Reload</span>
+        <span class="kv"><b>G</b>Grenade</span>
+        <span class="kv"><b>1 / 2</b>Weapons</span>
+      </div>
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>

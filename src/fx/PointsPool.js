@@ -27,7 +27,7 @@ void main() {
 	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 	float dist = max( 0.12, -mvPosition.z );
 	float ps = aSize * uHeight * 0.5 * projectionMatrix[1][1] / dist;
-	gl_PointSize = clamp( ps, 0.0, 620.0 );
+	gl_PointSize = clamp( ps, 0.0, 820.0 );
 	gl_Position = projectionMatrix * mvPosition;
 	#include <fog_vertex>
 }`;

@@ -78,7 +78,9 @@ function ping(a, out, t, { f = 800, g = 0.3, q = 10, dur = 0.14 } = {}) {
 function gunshot(a, o, cfg) {
   const ctx = a.ctx;
   const t0 = o._t0 != null ? o._t0 : ctx.currentTime;
-  const p = o.pitch || 1;
+  // Per-shot random variation (±3%) — identical repeated shots are the #1
+  // giveaway of fake gunfire. Caller-supplied pitch still multiplies through.
+  const p = (o.pitch || 1) * rnd(0.97, 1.03);
   const voice = ctx.createGain(); voice.gain.value = cfg.gain != null ? cfg.gain : 1;
 
   const bus = ctx.createGain(); bus.gain.value = 1;
