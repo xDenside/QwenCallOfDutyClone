@@ -1,0 +1,75 @@
+[
+  {
+    "name": "01_spawn_approach",
+    "pos": [0, 1.7, 42], "look": [0, 1.5, 0], "fov": 75, "wait": 2000,
+    "desc": "Player spawn POV approaching the compound gate. Judges: composition, golden-hour lighting, haze, world detail."
+  },
+  {
+    "name": "02_courtyard",
+    "pos": [0, 1.7, 14], "look": [0, 1.6, -18], "fov": 75, "wait": 2000,
+    "desc": "Inside the compound. Judges: material quality, clutter, shadows, AO."
+  },
+  {
+    "name": "03_wide_high",
+    "pos": [18, 5.5, 26], "look": [0, 1, -6], "fov": 70, "wait": 2000,
+    "desc": "Elevated wide of the compound. Judges: layout readability, scale, sky, horizon."
+  },
+  {
+    "name": "04_combat_hipfire",
+    "pos": [0, 1.7, 20], "look": [0, 1.5, 0], "fov": 75, "wait": 1200,
+    "evals": [
+      "if (window.game.enemies.debugSpawn) { window.game.enemies.debugSpawn(2, 8); window.game.enemies.debugSpawn(-3, 10); }",
+      "window.game.weapons.debugFire()"
+    ],
+    "postWait": 120,
+    "desc": "Hip-fire combat frame. Judges: viewmodel, muzzle flash, tracer, enemy presence, HUD."
+  },
+  {
+    "name": "05_ads_engagement",
+    "pos": [0, 1.7, 24], "look": [0, 1.5, 0], "fov": 75, "wait": 1200,
+    "evals": [
+      "if (window.game.enemies.debugSpawn) window.game.enemies.debugSpawn(0, 6)",
+      "window.game.input.buttons.add(2)"
+    ],
+    "postWait": 700,
+    "desc": "ADS engagement. Judges: sight alignment, FOV transition, enemy readability at range."
+  },
+  {
+    "name": "06_explosion",
+    "pos": [0, 1.7, 26], "look": [6, 1.5, 12], "fov": 75, "wait": 1200,
+    "evals": [
+      "window.game.fx.explosion(new THREE.Vector3(6, 1.2, 12), {})"
+    ],
+    "postWait": 350,
+    "desc": "Explosion mid-bloom. Judges: fireball, smoke, light response, shockwave, debris."
+  },
+  {
+    "name": "07_soldier_closeup",
+    "pos": [0.6, 1.6, 12.8], "look": [0, 1.35, 10], "fov": 55, "wait": 1200,
+    "evals": [
+      "if (window.game.enemies.debugSpawn) window.game.enemies.debugSpawn(0, 10)"
+    ],
+    "postWait": 500,
+    "desc": "Close-up of an enemy soldier. Judges: silhouette, camo material, kit detail, pose."
+  },
+  {
+    "name": "08_reload",
+    "pos": [0, 1.7, 30], "look": [0, 1.4, 0], "fov": 75, "wait": 1200,
+    "evals": [
+      "window.game.weapons.debugFire(); window.game.weapons.debugFire(); window.game.weapons.debugFire()",
+      "window.game.input.keys.add('KeyR')"
+    ],
+    "postWait": 900,
+    "desc": "Mid-reload viewmodel. Judges: animation believability, gun material close-up."
+  },
+  {
+    "name": "09_interior",
+    "pos": [0, 1.7, -8], "look": [0, 1.5, -26], "fov": 75, "wait": 2000,
+    "desc": "Main building interior if enterable. Judges: light shafts, interior AO, prop dressing."
+  },
+  {
+    "name": "10_sunset_silhouette",
+    "pos": [-24, 2.2, 24], "look": [30, 3, -30], "fov": 60, "wait": 2000,
+    "desc": "Looking toward the sun across the compound. Judges: sky, bloom, silhouette, atmosphere."
+  }
+]

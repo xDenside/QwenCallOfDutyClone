@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Engine } from './core/Engine.js';
 import { Input } from './core/Input.js';
 import { Player } from './player/Player.js';
@@ -47,6 +48,7 @@ const game = {
   }
 };
 window.game = game;
+window.THREE = THREE;
 
 game.level = new Level(game);
 game.lighting = new Lighting(game);

@@ -44,6 +44,7 @@ try {
   await page.waitForFunction('window.__GAME_READY__ === true', { timeout: 45000 });
   await page.evaluate(() => {
     window.game.debug.allowPausedUpdate = true;
+    document.getElementById('overlay').classList.add('hidden');
     if (window.game.audio && window.game.audio.forceUnlock) window.game.audio.forceUnlock();
   });
 
