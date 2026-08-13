@@ -87,18 +87,22 @@ export class Player {
     }
 
     const { dx, dy } = input.consumeDeltas();
-    const sens = 0.0021;
-    if (!game.debug.freeCam) {
-      this.yaw -= dx * sens;
-      this.pitch = THREE.MathUtils.clamp(this.pitch - dy * sens, -1.45, 1.45);
-    }
-
     const wantAds = input.button(2);
     this.ads = THREE.MathUtils.damp(this.ads, wantAds ? 1 : 0, 12, dt);
     const baseFov = 75;
     const adsFov = (game.weapons && game.weapons.current && game.weapons.current.adsFov) || 55;
     game.camera.fov = THREE.MathUtils.damp(game.camera.fov, THREE.MathUtils.lerp(baseFov, adsFov, this.ads), 14, dt);
     game.camera.updateProjectionMatrix();
+
+    // scale sensitivity with tan(fov/2) so on-screen turn rate stays constant:
+    // wide hip-fire FOV gets ~1.5x the angular rate, ADS keeps the old feel
+    const sens = 0.0031 *
+      Math.tan(THREE.MathUtils.degToRad(game.camera.fov * 0.5)) /
+      Math.tan(THREE.MathUtils.degToRad(baseFov * 0.5));
+    if (!game.debug.freeCam) {
+      this.yaw -= dx * sens;
+      this.pitch = THREE.MathUtils.clamp(this.pitch - dy * sens, -1.45, 1.45);
+    }
 
     const sprint = input.down('ShiftLeft') || input.down('ShiftRight');
     const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
