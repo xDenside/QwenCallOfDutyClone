@@ -112,7 +112,7 @@ export class DecalPool {
    * @param {number} time current game time
    * @param {number} alphaMax peak opacity (scorch marks dimmer than holes etc.)
    */
-  spawn(point, normal, size, time, alphaMax) {
+  spawn(point, normal, size, time, alphaMax, permanent) {
     const i = this.writeIdx;
     this.writeIdx = (this.writeIdx + 1) % this.cap;
 
@@ -139,7 +139,8 @@ export class DecalPool {
     this.aSize[i] = size;
     this.aAlpha[i] = alphaMax !== undefined ? alphaMax : 1;
     this.aMax[i] = this.aAlpha[i];
-    this.birth[i] = time;
+    // permanent dressing decals get a birth far in the future so age stays negative
+    this.birth[i] = permanent ? time + 1e7 : time;
 
     const attrs = this.geometry.attributes;
     attrs.aPos.needsUpdate = true;

@@ -70,7 +70,7 @@ function buildAtlas() {
   const rnd = mulberry32(0xC0D);
 
   // -- camo: olive/tan blotch noise (canvas top-left = UV [0..0.5]x[0.5..1])
-  g.fillStyle = '#6d6a4d';
+  g.fillStyle = '#7b7857';
   g.fillRect(0, 0, 256, 256);
   const camoCols = ['#575b3d', '#87795a', '#494d31', '#75704f', '#5e563c', '#3f4430'];
   for (let i = 0; i < 110; i++) {
@@ -164,6 +164,12 @@ function buildSharedGeometry() {
   addPart(P, new THREE.BoxGeometry(0.045, 0.09, 0.11), R.kit, BI.spine, -0.19, 1.26, 0);
   addPart(P, new THREE.BoxGeometry(0.045, 0.09, 0.11), R.kit, BI.spine, 0.19, 1.26, 0);
   addPart(P, new THREE.BoxGeometry(0.26, 0.33, 0.13), R.kit, BI.spine, 0, 1.29, -0.175);
+  // silhouette breakers: shoulder pads, chest strap, belt, radio
+  addPart(P, new THREE.BoxGeometry(0.13, 0.09, 0.12), R.kit, BI.shoulderL, -0.21, 1.42, 0);
+  addPart(P, new THREE.BoxGeometry(0.13, 0.09, 0.12), R.kit, BI.shoulderR, 0.21, 1.42, 0);
+  addPart(P, new THREE.BoxGeometry(0.36, 0.06, 0.28), R.kit, BI.spine, 0, 1.42, 0.005);
+  addPart(P, new THREE.BoxGeometry(0.32, 0.07, 0.23), R.kit, BI.hips, 0, 1.0, 0);
+  addPart(P, new THREE.BoxGeometry(0.05, 0.12, 0.05), R.kit, BI.spine, -0.14, 1.44, 0.15);
 
   // head (skin) + helmet with rim and cover band
   addPart(P, new THREE.SphereGeometry(0.105, 12, 10), R.skin, BI.head, 0, 1.66, 0.015, { scale: [1, 1.18, 1.02] });
@@ -171,21 +177,21 @@ function buildSharedGeometry() {
   addPart(P, new THREE.TorusGeometry(0.128, 0.015, 6, 18), R.camo, BI.head, 0, 1.658, 0.005, { rx: Math.PI / 2 });
   addPart(P, new THREE.CylinderGeometry(0.138, 0.132, 0.04, 14, 1, true), R.kit, BI.head, 0, 1.685, 0.005);
 
-  // arms: upper (camo sleeves), forearm (camo), hand (skin)
-  addPart(P, new THREE.BoxGeometry(0.095, 0.30, 0.095), R.camo, BI.shoulderL, -0.21, 1.31, 0);
-  addPart(P, new THREE.BoxGeometry(0.095, 0.30, 0.095), R.camo, BI.shoulderR, 0.21, 1.31, 0);
-  addPart(P, new THREE.BoxGeometry(0.085, 0.27, 0.085), R.camo, BI.elbowL, -0.21, 1.03, 0);
-  addPart(P, new THREE.BoxGeometry(0.085, 0.27, 0.085), R.camo, BI.elbowR, 0.21, 1.03, 0);
+  // arms: capsule limbs read smooth at 5m where boxes showed hard edges
+  addPart(P, new THREE.CapsuleGeometry(0.055, 0.20, 3, 8), R.camo, BI.shoulderL, -0.21, 1.31, 0, { scale: [1, 1, 0.92] });
+  addPart(P, new THREE.CapsuleGeometry(0.055, 0.20, 3, 8), R.camo, BI.shoulderR, 0.21, 1.31, 0, { scale: [1, 1, 0.92] });
+  addPart(P, new THREE.CapsuleGeometry(0.047, 0.18, 3, 8), R.camo, BI.elbowL, -0.21, 1.03, 0);
+  addPart(P, new THREE.CapsuleGeometry(0.047, 0.18, 3, 8), R.camo, BI.elbowR, 0.21, 1.03, 0);
   addPart(P, new THREE.BoxGeometry(0.07, 0.10, 0.08), R.skin, BI.elbowL, -0.21, 0.87, 0.01);
   addPart(P, new THREE.BoxGeometry(0.07, 0.10, 0.08), R.skin, BI.elbowR, 0.21, 0.87, 0.01);
 
   // legs: thigh (camo), knee pad (kit), shin (camo), boot (kit)
-  addPart(P, new THREE.BoxGeometry(0.125, 0.45, 0.135), R.camo, BI.hipL, -0.105, 0.705, 0);
-  addPart(P, new THREE.BoxGeometry(0.125, 0.45, 0.135), R.camo, BI.hipR, 0.105, 0.705, 0);
+  addPart(P, new THREE.CapsuleGeometry(0.066, 0.32, 3, 8), R.camo, BI.hipL, -0.105, 0.705, 0, { scale: [1, 1, 1.06] });
+  addPart(P, new THREE.CapsuleGeometry(0.066, 0.32, 3, 8), R.camo, BI.hipR, 0.105, 0.705, 0, { scale: [1, 1, 1.06] });
   addPart(P, new THREE.BoxGeometry(0.115, 0.10, 0.115), R.kit, BI.kneeL, -0.105, 0.47, 0.03);
   addPart(P, new THREE.BoxGeometry(0.115, 0.10, 0.115), R.kit, BI.kneeR, 0.105, 0.47, 0.03);
-  addPart(P, new THREE.BoxGeometry(0.105, 0.38, 0.115), R.camo, BI.kneeL, -0.105, 0.27, 0);
-  addPart(P, new THREE.BoxGeometry(0.105, 0.38, 0.115), R.camo, BI.kneeR, 0.105, 0.27, 0);
+  addPart(P, new THREE.CapsuleGeometry(0.052, 0.27, 3, 8), R.camo, BI.kneeL, -0.105, 0.27, 0, { scale: [1, 1, 1.08] });
+  addPart(P, new THREE.CapsuleGeometry(0.052, 0.27, 3, 8), R.camo, BI.kneeR, 0.105, 0.27, 0, { scale: [1, 1, 1.08] });
   addPart(P, new THREE.BoxGeometry(0.11, 0.12, 0.21), R.kit, BI.kneeL, -0.105, 0.06, 0.035);
   addPart(P, new THREE.BoxGeometry(0.11, 0.12, 0.21), R.kit, BI.kneeR, 0.105, 0.06, 0.035);
 
@@ -217,7 +223,12 @@ export class Soldier {
     return {
       geometry: buildSharedGeometry(),
       atlas,
-      material: new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.85, metalness: 0.06 }),
+      // emissiveMap = atlas lifts shadow sides with dim camo so soldiers
+      // never collapse to pure black silhouettes at golden hour
+      material: new THREE.MeshStandardMaterial({
+        map: atlas, roughness: 0.85, metalness: 0.06,
+        emissive: 0xffffff, emissiveMap: atlas, emissiveIntensity: 0.12
+      }),
     };
   }
 

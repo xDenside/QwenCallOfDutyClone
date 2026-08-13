@@ -37,8 +37,8 @@ const RELOAD_ANIM = {
     lean: [[0, 0], [0.13, 1], [0.74, 1], [0.92, 0]],
     mag: [[0.10, 0], [0.38, 1], [0.56, 1], [0.76, 0]],
     boltReload: [[0.76, 0], [0.83, 1], [0.92, 0]],
-    leanAmp: { pitch: -0.22, y: -0.052, z: 0.03, roll: 0.06 },
-    magDist: 0.19, magRotX: 0.45, magRotZ: 0.08, boltPull: 0.052,
+    leanAmp: { pitch: -0.3, y: -0.052, z: 0.03, roll: 0.06 },
+    magDist: 0.26, magRotX: 0.45, magRotZ: 0.08, boltPull: 0.052,
   },
   P1911: {
     lean: [[0, 0], [0.12, 1], [0.70, 1], [0.90, 0]],

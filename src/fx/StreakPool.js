@@ -23,7 +23,10 @@ void main() {
 	vec3 side = cross( axis, toCam );
 	float sl = length( side );
 	side = sl > 1e-4 ? side / sl : vec3( 0.0, 1.0, 0.0 );
-	vec3 wp = iCenter + axis * ( position.x * iLen ) + side * ( position.y * iWidth );
+	// taper width to zero at the camera so near-passing tracers stay thin streaks
+	vec3 base = iCenter + axis * ( position.x * iLen );
+	float wScale = clamp( length( cameraPosition - base ) * 0.5, 0.0, 1.0 );
+	vec3 wp = base + side * ( position.y * iWidth * wScale );
 	vUv = uUv.xy + uv * uUv.zw;
 	vColor = iColor;
 	vAlpha = iAlpha;
@@ -131,7 +134,7 @@ export class StreakPool {
     this.f[f6 + 1] = dist;
     this.f[f6 + 2] = 0;
     this.f[f6 + 3] = Math.min(6, Math.max(2, dist * 0.5)); // trail length
-    this.f[f6 + 4] = opts.width || 0.05;
+    this.f[f6 + 4] = opts.width || 0.045;
     this.f[f6 + 5] = 1;
     this.iColor[i3] = col[0]; this.iColor[i3 + 1] = col[1]; this.iColor[i3 + 2] = col[2];
     this.iAxis[i3] = dxv; this.iAxis[i3 + 1] = dyv; this.iAxis[i3 + 2] = dzv;

@@ -11,12 +11,12 @@ const url = process.argv[3] || 'http://localhost:4173/';
 mkdirSync(roundDir, { recursive: true });
 const browser = await puppeteer.launch({
   headless: true,
-  args: ['--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--use-angle=metal', '--window-size=1920,1080']
+  args: ['--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--use-angle=metal', '--window-size=1280,720']
 });
 
 for (const shot of shots) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error(`[${shot.name} pageerror]`, e.message));
   try {
     await page.goto(url, { waitUntil: 'load', timeout: 60000 });
@@ -34,11 +34,14 @@ for (const shot of shots) {
       await page.evaluate((p, l, f) => window.game.debug.setCamera(p, l, f), shot.pos, shot.look, shot.fov || null);
     }
     await new Promise((r) => setTimeout(r, shot.wait || 1500));
+    for (const src of shot.lateEvals || []) {
+      await page.evaluate((s) => { (0, eval)(s); }, src);
+    }
     if (shot.postWait) {
       await new Promise((r) => setTimeout(r, shot.postWait));
     }
-    const path = `${roundDir}/${shot.name}.png`;
-    await page.screenshot({ path, type: 'png' });
+    const path = `${roundDir}/${shot.name}.jpg`;
+    await page.screenshot({ path, type: 'jpeg', quality: 80 });
     console.log(`CAPTURED ${path}`);
   } catch (e) {
     console.error(`FAILED ${shot.name}: ${e.message}`);

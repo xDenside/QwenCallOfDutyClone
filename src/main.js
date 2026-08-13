@@ -71,8 +71,14 @@ for (const s of bootOrder) {
 
 const overlay = document.getElementById('overlay');
 overlay.addEventListener('click', () => engine.renderer.domElement.requestPointerLock());
-game.input.onLock(() => { game.paused = false; overlay.classList.add('hidden'); });
-game.input.onUnlock(() => { game.paused = true; overlay.classList.remove('hidden'); });
+let wasLocked = false;
+game.input.onLock(() => { wasLocked = true; game.paused = false; overlay.classList.add('hidden'); });
+game.input.onUnlock(() => {
+  game.paused = true;
+  // a spurious unlock event on a page that was never locked (headless capture)
+  // must not resurrect the start screen
+  if (wasLocked) overlay.classList.remove('hidden');
+});
 
 const clock = engine.clock;
 function frame() {

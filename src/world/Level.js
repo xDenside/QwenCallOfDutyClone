@@ -49,6 +49,16 @@ export class Level {
     m *= smoothstep(0.5, 3, rectDist(-43.5, 8.5, -30.5, 21.5));
     m *= smoothstep(0.5, 3, rectDist(26.5, -9.5, 37.5, 1.5));
     m *= smoothstep(0.5, 3, rectDist(28.5, 28.5, 42.5, 39.5));
+    // urban blocks (round-6 map pass)
+    m *= smoothstep(0.5, 4, rectDist(25.5, -48.5, 48.5, -29.5));
+    m *= smoothstep(0.5, 4, rectDist(21.5, 5.5, 46.5, 24.5));
+    m *= smoothstep(0.5, 3, rectDist(-28.5, 25.5, -13.5, 42.5));
+    m *= smoothstep(0.5, 3, rectDist(-8.5, -36.5, 4.5, -23.5));
+    m *= smoothstep(0.5, 3, rectDist(13.5, -26.5, 21.5, -19.5));
+    m *= smoothstep(0.5, 3, rectDist(11.5, 33.5, 26.5, 48.5));
+    m *= smoothstep(0.5, 3, rectDist(44.5, -18.5, 51.5, 6.5));
+    m *= smoothstep(0.5, 3, rectDist(43.5, 13.5, 50.5, 30.5));
+    m *= smoothstep(0.5, 3, rectDist(7.5, -50.5, 26.5, -43.5));
     // pad under the wrecked truck
     m *= smoothstep(0.5, 3, rectDist(5.5, 25.5, 14.5, 34.5));
     // strips hugging the perimeter walls
@@ -100,7 +110,7 @@ export class Level {
     this.group.add(decal);
 
     // ---- structures & props ----
-    const buckets = { concrete: [], tin: [], planks: [], painted: [], rubber: [], glass: [] };
+    const buckets = { concrete: [], tin: [], planks: [], painted: [], rubber: [], glass: [], stucco: [], brick: [] };
     const W = {
       M: this.M,
       group: this.group,
@@ -117,6 +127,18 @@ export class Level {
 
     Builders.buildPerimeter(W);
     Builders.buildMainBuilding(W);
+    Builders.buildBarracks(W);
+    Builders.buildNEBlock(W);
+    Builders.buildWestBlock(W);
+    Builders.buildAnnex(W);
+    Builders.buildSEBlock(W);
+    Builders.buildWarehouse(W);
+    Builders.buildFuelDepot(W);
+    Builders.buildNorthSheds(W);
+    Builders.buildUrbanDress(W);
+    Builders.buildCourtyardFill(W);
+    Builders.buildSiteDress(W);
+    Builders.buildFarDress(W);
     Builders.buildShed(W);
     Builders.buildCommsHut(W);
     Builders.buildWatchtower(W);
@@ -127,6 +149,8 @@ export class Level {
     Builders.buildSandbags(W);
     Builders.buildBarriers(W);
     Builders.buildRocks(W);
+    Builders.buildShrubs(W);
+    Builders.buildPebbles(W);
     Builders.buildDebris(W);
     Builders.buildGrass(W);
     Builders.buildDistant(W, sunDirection());

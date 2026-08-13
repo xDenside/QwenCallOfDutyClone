@@ -8,12 +8,12 @@ const damp = THREE.MathUtils.damp;
 // Tuning. Everything a critic might want to poke lives here.
 // ---------------------------------------------------------------------------
 export const TUNE = {
-  sightRange: 58,           // m, max distance an NPC can spot the player
+  sightRange: 42,           // m, max distance an NPC can spot the player
   fovHalfPatrol: 0.96,      // rad (~55 deg half-angle while patrolling)
   fovHalfAlert: 1.40,       // rad (~80 deg once roused)
   suspicionAlert: 0.45,     // meter value that triggers PATROL -> ALERT
   suspicionCombat: 1.0,     // meter value that triggers -> COMBAT
-  gunshotRadius: 45,        // m, gunfire instantly alerts everyone inside
+  gunshotRadius: 36,        // m, gunfire instantly alerts everyone inside
   maxShooters: 3,           // max NPCs firing simultaneously
   shotInterval: 0.1,        // s between burst rounds (600 rpm)
   burstPauseMin: 0.5,       // s
@@ -153,7 +153,7 @@ export class Behavior {
     for (const o of this.sys.npcs) {
       if (o === npc || o.dead) continue;
       const dx = o.position.x - npc.position.x, dz = o.position.z - npc.position.z;
-      if (dx * dx + dz * dz < 26 * 26) {
+      if (dx * dx + dz * dz < 20 * 20) {
         o.suspicion = Math.min(1.25, o.suspicion + 0.45);
         if (o.state === PATROL) o.alertPos.copy(game.player.position);
       }
@@ -370,8 +370,8 @@ export class Behavior {
 
     // miss bias: distance, player speed, fresh-acquire spread, own accuracy
     const moving = p.hSpeed > 1.2 ? p.hSpeed : 0;
-    let err = (0.8 + dist * 0.021 + moving * 0.42 + npc.spreadBoost)
-      * (1.25 - npc.accuracy * 0.5);
+    let err = (0.95 + dist * 0.024 + moving * 0.42 + npc.spreadBoost)
+      * (1.35 - npc.accuracy * 0.5);
     if (npc.hasMoveTarget) err += 1.6; // firing on the move is sloppy
     const er = err * 0.01745;
     dir.x += (Math.random() - 0.5) * 2.4 * er;

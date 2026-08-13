@@ -251,10 +251,13 @@ export class EnemySystem {
     for (const npc of this.npcs) {
       if (npc.dead) continue;
       if (npc.state === 'COMBAT') {
-        npc.suspicion = 0.55;
+        npc.suspicion = 0.4;
         npc.lastSeenTime = -99;
         npc.firing = false;
-        npc.behavior.toAlert(npc.lastSeenPos);
+        npc.hasMoveTarget = false;
+        // search around their own spot, not the death spot, or the squad
+        // converges on the player's death point and camps the spawn
+        npc.behavior.toAlert(npc.position);
       }
     }
   }

@@ -131,6 +131,7 @@ export class EffectsSystem {
     this.sparks = new StreakPool(this.scene, T.atlasTex, T.UV.streak, { cap: 110, renderOrder: 7 });
     // decals
     this.decals = new DecalPool(this.scene, T.hole, 80);
+    this._dress();
 
     // muzzle flash sprites --------------------------------------------------
     this.flashes = [];
@@ -274,6 +275,35 @@ export class EffectsSystem {
     }
   }
 
+  /** Permanent bullet-hole clusters: the gate fight already happened here. */
+  _dress() {
+    let a = 0xC0FFEE;
+    const rnd = () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const hole = (x, y, z, nz, s) => {
+      this.decals.spawn(
+        new THREE.Vector3(x + (rnd() - 0.5) * 0.35, y + (rnd() - 0.5) * 0.3, z),
+        new THREE.Vector3(0, 0, nz), s, 0, 0.9, true
+      );
+    };
+    // main building south face (z=-15.6, +Z): suppression around doors + window
+    const wall = [
+      [-21.6, 1.5], [-20.4, 1.75], [-21.1, 2.15], [-19.7, 1.3],
+      [-7.5, 1.6], [-6.6, 1.95], [-8.3, 1.35],
+      [-14.5, 1.15], [-13.3, 1.35], [-15.3, 1.05],
+      [-25.2, 2.4], [-11.2, 2.6]
+    ];
+    // quads read ~4x the visible core, so size generously for distance legibility
+    for (const [x, y] of wall) hole(x, y, -15.6, 1, 0.5 + rnd() * 0.3);
+    // perimeter wall flanking the breached gate (z=51.8, -Z)
+    const gate = [[-6, 1.5], [-7.2, 1.85], [-5.1, 2.2], [6.1, 1.6], [7.4, 1.3], [5.2, 2.0]];
+    for (const [x, y] of gate) hole(x, y, 51.8, -1, 0.5 + rnd() * 0.3);
+  }
+
   // ------------------------------------------------------------ public API
 
   /** Camera-facing star flash + glow particle + pooled PointLight. */
@@ -299,7 +329,7 @@ export class EffectsSystem {
     f.active = true;
     f.life = 0;
     f.maxLife = 0.04 + Math.random() * 0.02; // 40–60 ms
-    f.baseScale = 0.56 * scale * (0.92 + Math.random() * 0.2);
+    f.baseScale = 0.42 * scale * (0.92 + Math.random() * 0.2);
     f.rotA = Math.random() * Math.PI * 2;
     f.rotB = f.rotA + (0.5 + Math.random() * 1.6) * (Math.random() < 0.5 ? -1 : 1);
     f.scaleB = 1.25 + Math.random() * 0.25;
@@ -394,7 +424,7 @@ export class EffectsSystem {
       cfg.pos.copy(point).addScaledVector(_v2, 0.2 * s);
       cfg.vel.copy(_v2).multiplyScalar((1.6 + Math.random() * 3.2) * s);
       cfg.vel.y += 1.2 * s;
-      cfg.life = 0.22 + Math.random() * 0.12;
+      cfg.life = 0.32 + Math.random() * 0.22;
       cfg.size0 = (0.5 + Math.random() * 0.45) * s;
       cfg.size1 = cfg.size0 * (2.6 + Math.random() * 1.2);
       cfg.drag = 2.5; cfg.grav = 0; cfg.turb = 0; cfg.rot = Math.random() * 6.28; cfg.rotV = (Math.random() - 0.5) * 3;
@@ -417,19 +447,19 @@ export class EffectsSystem {
       this.glow.spawn(cfg);
     }
 
-    // (b) smoke column — 12-20 rising turbulent sprites, lit warm at first
-    const ns = Math.round((12 + ((Math.random() * 8) | 0)) * Math.min(s, 1.6));
+    // (b) smoke column — rising turbulent sprites, lit warm at first
+    const ns = Math.round((16 + ((Math.random() * 10) | 0)) * Math.min(s, 1.6));
     for (let i = 0; i < ns; i++) {
       rndSphere(_v2);
       const cfg = this._softCfg;
       cfg.pos.copy(point).addScaledVector(_v2, 0.35 * s);
-      cfg.vel.set(_v2.x * 1.5 * s, (1.1 + Math.random() * 1.7) * s + Math.abs(_v2.y), _v2.z * 1.5 * s);
-      cfg.life = 1.9 + Math.random() * 0.9;
+      cfg.vel.set(_v2.x * 1.5 * s, (1.6 + Math.random() * 2.2) * s + Math.abs(_v2.y), _v2.z * 1.5 * s);
+      cfg.life = 2.6 + Math.random() * 1.2;
       cfg.size0 = (0.6 + Math.random() * 0.5) * s;
-      cfg.size1 = cfg.size0 * (3 + Math.random() * 1.3);
+      cfg.size1 = cfg.size0 * (3.6 + Math.random() * 1.6);
       cfg.rot = Math.random() * 6.28; cfg.rotV = (Math.random() - 0.5) * 1.2;
       cfg.drag = 1.1; cfg.grav = -0.55; cfg.turb = 1.5;
-      cfg.alpha = 0.8;
+      cfg.alpha = 0.85;
       const r = Math.random();
       cfg.c0 = r < 0.35 ? C_SMOKE_LIT : (r < 0.75 ? C_SMOKE_MID : C_SMOKE_DARK);
       cfg.c1 = C_SMOKE_END;

@@ -5,7 +5,7 @@
 
 import { el } from './dom.js';
 
-const PPD = 2.4;          // pixels per degree
+const PPD = 3.0;          // pixels per degree
 const WIDTH = 400;        // must match .compass-wrap width in CSS
 const CENTER = WIDTH / 2;
 const CARDINALS = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };

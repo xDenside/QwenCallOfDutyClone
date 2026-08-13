@@ -194,17 +194,17 @@ export function createWeaponMaterials(renderer) {
   }
 
   const steel = new THREE.MeshStandardMaterial({
-    color: 0x42464d, metalness: 0.85, roughness: 0.45,
-    map: grime, roughnessMap: metalRough, envMap: env, envMapIntensity: 0.6,
+    color: 0x272a2e, metalness: 0.7, roughness: 0.5,
+    map: grime, roughnessMap: metalRough, envMap: env, envMapIntensity: 0.9,
   });
   const steelDark = new THREE.MeshStandardMaterial({
-    color: 0x2a2d31, metalness: 0.80, roughness: 0.52,
-    map: grime, roughnessMap: metalRough, envMap: env, envMapIntensity: 0.45,
+    color: 0x1d1f22, metalness: 0.65, roughness: 0.55,
+    map: grime, roughnessMap: metalRough, envMap: env, envMapIntensity: 0.7,
   });
   const polymer = new THREE.MeshStandardMaterial({
-    color: 0x26211d, metalness: 0.12, roughness: 0.62,
+    color: 0x191512, metalness: 0.1, roughness: 0.7,
     map: grime, roughnessMap: polyRough, bumpMap: stipple, bumpScale: 0.4,
-    envMap: env, envMapIntensity: 0.22,
+    envMap: env, envMapIntensity: 0.3,
   });
   return { steel, steelDark, polymer, env };
 }
@@ -227,11 +227,11 @@ export function buildM4(mats) {
   darkG.push(cylZ(0.0142, 0.0142, 0.05, 0, 0, -0.492, 14));              // muzzle brake
   darkG.push(cylZ(0.0118, 0.0118, 0.008, 0, 0, -0.521, 14));             // crown
 
-  // --- front sight post (A2 style), tip y == lineY (0.056) ---
+  // --- front sight post (A2 style), tip y == lineY (0.076) ---
   steelG.push(box(0.014, 0.02, 0.016, 0, 0.022, -0.45));
-  steelG.push(box(0.0045, 0.03, 0.005, 0, 0.041, -0.45));
-  steelG.push(box(0.004, 0.024, 0.013, 0.009, 0.031, -0.45));
-  steelG.push(box(0.004, 0.024, 0.013, -0.009, 0.031, -0.45));
+  steelG.push(box(0.004, 0.05, 0.0045, 0, 0.051, -0.45));
+  steelG.push(box(0.0035, 0.03, 0.012, 0.008, 0.036, -0.45));
+  steelG.push(box(0.0035, 0.03, 0.012, -0.008, 0.036, -0.45));
 
   // --- receiver ---
   steelG.push(box(0.052, 0.036, 0.35, 0, 0.013, 0.005));                 // upper
@@ -254,10 +254,10 @@ export function buildM4(mats) {
   darkG.push(box(0.010, 0.02, 0.014, 0.030, 0.012, 0.068, 0, 0.55, 0));
   darkG.push(cylX(0.007, 0.012, 0.033, 0.002, 0.055));
 
-  // --- rear sight (aperture center y == lineY 0.056, z == rearZ 0.105) ---
+  // --- rear sight (aperture center y == lineY 0.076, z == rearZ 0.105) ---
   darkG.push(box(0.032, 0.01, 0.032, 0, 0.045, 0.105));
-  darkG.push(box(0.007, 0.022, 0.016, 0.0145, 0.056, 0.108));
-  darkG.push(box(0.007, 0.022, 0.016, -0.0145, 0.056, 0.108));
+  darkG.push(box(0.005, 0.026, 0.012, 0.0125, 0.063, 0.108));
+  darkG.push(box(0.005, 0.026, 0.012, -0.0125, 0.063, 0.108));
   darkG.push(cylX(0.006, 0.009, 0.023, 0.05, 0.105));
 
   // --- handguard + furniture (polymer, warm black) ---
@@ -314,7 +314,7 @@ export function buildM4(mats) {
   // --- markers ---
   const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0, -0.528); body.add(muzzle);
   const eject = new THREE.Object3D(); eject.position.set(0.038, 0.016, 0.05); body.add(eject);
-  const sight = new THREE.Object3D(); sight.position.set(0, 0.056, 0.105); body.add(sight);
+  const sight = new THREE.Object3D(); sight.position.set(0, 0.076, 0.105); body.add(sight);
 
   return {
     name: 'M4A1', root, body, mag, bolt: ch, muzzle, eject, sight,

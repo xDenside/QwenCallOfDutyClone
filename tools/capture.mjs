@@ -23,6 +23,7 @@ const pos = get('--pos', null);
 const look = get('--look', null);
 const fov = get('--fov', null);
 const evals = getAll('--eval');
+const printExpr = get('--print', null);
 
 let browser;
 try {
@@ -32,11 +33,11 @@ try {
       '--ignore-gpu-blocklist',
       '--enable-unsafe-swiftshader',
       '--use-angle=metal',
-      '--window-size=1920,1080'
+      '--window-size=1280,720'
     ]
   });
   const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error('[pageerror]', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.error('[console]', m.text()); });
 
@@ -59,9 +60,14 @@ try {
   }
 
   await new Promise((r) => setTimeout(r, wait));
+  if (printExpr) {
+    const out = await page.evaluate((s) => { try { return JSON.stringify((0, eval)(s)); } catch (e) { return 'ERR ' + e.message; } }, printExpr);
+    console.log('PRINT', out);
+  }
+  await page.evaluate(() => document.getElementById('overlay').classList.add('hidden'));
   mkdirSync(outDir, { recursive: true });
-  const path = `${outDir}/${name}.png`;
-  await page.screenshot({ path, type: 'png' });
+  const path = `${outDir}/${name}.jpg`;
+  await page.screenshot({ path, type: 'jpeg', quality: 80 });
   console.log(`CAPTURED ${path}`);
 } catch (e) {
   console.error('CAPTURE FAILED:', e.message);

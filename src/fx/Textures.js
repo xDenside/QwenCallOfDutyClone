@@ -89,7 +89,9 @@ function drawSmoke(seed) {
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
     }
-    // circular boundary mask
+    // circular boundary mask — destination-in KEEPS the inside; the previous
+    // destination-out would have erased the sprite core entirely
+    ctx.globalCompositeOperation = 'destination-in';
     const m = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.5);
     m.addColorStop(0, 'rgba(0,0,0,1)');
     m.addColorStop(0.55, 'rgba(0,0,0,1)');
