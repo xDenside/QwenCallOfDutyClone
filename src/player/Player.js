@@ -20,6 +20,8 @@ export class Player {
     this.recoilPitch = 0;
     this.recoilYaw = 0;
     this.ads = 0;
+    // hip-fire base sensitivity; tune live via game.player.sensBase in console
+    this.sensBase = 0.004;
     this.dead = false;
     this.timeSinceDamage = 99;
     this.respawnTimer = 0;
@@ -94,11 +96,10 @@ export class Player {
     game.camera.fov = THREE.MathUtils.damp(game.camera.fov, THREE.MathUtils.lerp(baseFov, adsFov, this.ads), 14, dt);
     game.camera.updateProjectionMatrix();
 
-    // scale sensitivity with tan(fov/2) so on-screen turn rate stays constant:
-    // wide hip-fire FOV gets ~1.5x the angular rate, ADS keeps the old feel
-    const sens = 0.0031 *
-      Math.tan(THREE.MathUtils.degToRad(game.camera.fov * 0.5)) /
-      Math.tan(THREE.MathUtils.degToRad(baseFov * 0.5));
+    // ADS keeps the 0.0021 feel; hip-fire uses sensBase (wide FOV reads
+    // slower, so it needs a boosted angular rate to feel equal)
+    const t = THREE.MathUtils.clamp((game.camera.fov - adsFov) / (baseFov - adsFov), 0, 1);
+    const sens = THREE.MathUtils.lerp(0.0021, this.sensBase, t);
     if (!game.debug.freeCam) {
       this.yaw -= dx * sens;
       this.pitch = THREE.MathUtils.clamp(this.pitch - dy * sens, -1.45, 1.45);
