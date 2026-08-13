@@ -138,6 +138,7 @@ export class Level {
     Builders.buildUrbanDress(W);
     Builders.buildCourtyardFill(W);
     Builders.buildSiteDress(W);
+    Builders.buildStreetLitter(W);
     Builders.buildFarDress(W);
     Builders.buildShed(W);
     Builders.buildCommsHut(W);

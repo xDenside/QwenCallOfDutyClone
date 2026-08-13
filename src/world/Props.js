@@ -24,6 +24,16 @@ const UV_SCALE = { concrete: 0.18, tin: 0.16, planks: 0.34, painted: 0.4, rubber
 // drops a little cover cluster at each so the mid-ground reads dressed, not dotted
 const NESTS = [[-4, 34], [7, 26], [-10, 8], [14, -2], [26, -24], [26, 14], [-18, 34], [-2, -20]];
 
+// building footprints: scatter props stay out of interiors, and weeds/litter
+// hug the wall bases so edges read weathered
+const FOOTPRINTS = [
+  [-31, -41, -1, -15], [27, -9, 37, 1], [25, -49, 49, -29], [21, 5, 47, 25],
+  [-29, 25, -13, 43], [-9, -41, 5, -23], [11, 33, 27, 49], [44, -19, 52, 7],
+  [43, 15, 51, 31], [7, -51, 27, -43]
+];
+const inFootprint = (x, z) =>
+  FOOTPRINTS.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
+
 // analytic skirt height (mirrors buildDistant's terrain ring) for props placed
 // beyond the playable terrain
 function skirtY(x, z) {
@@ -898,28 +908,18 @@ function buildGrass(W) {
 
   const rnd = mulberry32(31337);
   const items = [];
-  const inRect = (x, z, x0, z0, x1, z1) => x > x0 && x < x1 && z > z0 && z < z1;
   let attempts = 0;
-  while (items.length < 900 && attempts++ < 8000) {
+  while (items.length < 1500 && attempts++ < 14000) {
     const x = (rnd() - 0.5) * 116, z = (rnd() - 0.5) * 116;
     // keep off the main drive and out of building interiors
     if (Math.abs(x) < 6 && z > 20) continue;
-    if (inRect(x, z, -31, -41, -1, -15)) continue;
-    if (inRect(x, z, 27, -9, 37, 1)) continue;
-    if (inRect(x, z, 25, -49, 49, -29)) continue;
-    if (inRect(x, z, 21, 5, 47, 25)) continue;
-    if (inRect(x, z, -29, 25, -13, 43)) continue;
-    if (inRect(x, z, -9, -41, 5, -23)) continue;
-    if (inRect(x, z, 11, 33, 27, 49)) continue;
-    if (inRect(x, z, 44, -19, 52, 7)) continue;
-    if (inRect(x, z, 43, 15, 51, 31)) continue;
-    if (inRect(x, z, 7, -51, 27, -43)) continue;
-    // clustering bias: near walls & structures, sparse in open yard
+    if (inFootprint(x, z)) continue;
+    // clustering bias: near walls & structures, sparser in open yard
     const nearWall = Math.min(52 - Math.abs(x), 52 - Math.abs(z)) < 7;
-    const nearThing = inRect(x, z, -46, 7, -29, 23) || Math.hypot(x - 38, z - 34) < 9 ||
+    const nearThing = x > -46 && x < -29 && z > 7 && z < 23 || Math.hypot(x - 38, z - 34) < 9 ||
       Math.hypot(x + 14, z + 6) < 5 || Math.hypot(x - 16, z - 4) < 4 ||
       NESTS.some(([nx, nz]) => Math.hypot(x - nx, z - nz) < 4);
-    if (!nearWall && !nearThing && rnd() < 0.82) continue;
+    if (!nearWall && !nearThing && rnd() < 0.62) continue;
     const s = 0.55 + rnd() * 0.75;
     items.push({
       x, y: W.heightAt(x, z) - 0.03, z, ry: rnd() * Math.PI,
@@ -927,6 +927,29 @@ function buildGrass(W) {
       // texture carries the straw colour; tint only adds per-tuft variation
       color: new THREE.Color().setHSL(0.09 + rnd() * 0.05, 0.14 + rnd() * 0.18, 0.66 + rnd() * 0.28)
     });
+  }
+  // greener weeds hugging building bases and the perimeter wall
+  const weed = (x, z) => {
+    const s = 0.3 + rnd() * 0.4;
+    items.push({
+      x, y: W.heightAt(x, z) - 0.03, z, ry: rnd() * Math.PI,
+      sx: s, sy: s * (0.7 + rnd() * 0.6), sz: s,
+      color: new THREE.Color().setHSL(0.22 + rnd() * 0.08, 0.3 + rnd() * 0.2, 0.42 + rnd() * 0.2)
+    });
+  };
+  for (const [x0, z0, x1, z1] of FOOTPRINTS) {
+    for (let i = 0; i < 16; i++) {
+      const side = (rnd() * 4) | 0, t = rnd();
+      const x = side < 2 ? (side === 0 ? x0 : x1) + (rnd() - 0.5) * 1.4 : x0 + t * (x1 - x0);
+      const z = side < 2 ? z0 + t * (z1 - z0) : (side === 2 ? z0 : z1) + (rnd() - 0.5) * 1.4;
+      if (!inFootprint(x, z)) weed(x, z);
+    }
+  }
+  for (let i = 0; i < 110; i++) {
+    const side = (rnd() * 4) | 0, t = (rnd() - 0.5) * 100;
+    const x = side < 2 ? (side === 0 ? -50.6 : 50.6) + (rnd() - 0.5) * 1.8 : t;
+    const z = side < 2 ? t : (side === 2 ? -50.6 : 50.6) + (rnd() - 0.5) * 1.8;
+    weed(x, z);
   }
   const mat = W.M.grass;
   const timeUniform = W.timeUniform;
@@ -1605,6 +1628,123 @@ function buildDistant(W, sunDir) {
 }
 
 // ---------------------------------------------------------------------------
+// Street litter: crushed cans, bottles, bags, rubble, boards, buckets,
+// tipped drums — the small trash that makes a compound read lived-in
+// ---------------------------------------------------------------------------
+function buildStreetLitter(W) {
+  const rnd = mulberry32(4242);
+  const open = (x, z) => Math.abs(x) < 51 && Math.abs(z) < 51 && !inFootprint(x, z);
+  const ANCHORS = [[0, 50], [45.5, 28.5], [-16, 34], [2, 8], [26, 14], [-10, 8],
+    [14, -2], [7, 26], [-4, 34], [36, 31], [-24, 40], [20, -6]];
+  const spot = (spread) => {
+    for (let a = 0; a < 10; a++) {
+      const [ax, az] = ANCHORS[(rnd() * ANCHORS.length) | 0];
+      const x = ax + (rnd() - 0.5) * spread, z = az + (rnd() - 0.5) * spread;
+      if (open(x, z)) return [x, z];
+    }
+    return null;
+  };
+
+  // drink cans — mostly crushed flat, a few whole
+  const canItems = [];
+  for (let i = 0; i < 54; i++) {
+    const s = spot(7);
+    if (!s) continue;
+    const crushed = rnd() < 0.6;
+    canItems.push({
+      x: s[0], y: W.heightAt(s[0], s[1]) + (crushed ? 0.012 : 0.05), z: s[1],
+      ry: rnd() * Math.PI,
+      sx: crushed ? 1.5 : 1, sy: crushed ? 0.35 : 1, sz: crushed ? 1.5 : 1,
+      color: new THREE.Color().setHSL(rnd() < 0.5 ? 0.0 : 0.55, 0.25 + rnd() * 0.3, 0.5 + rnd() * 0.3)
+    });
+  }
+  makeInstanced(W, new THREE.CylinderGeometry(0.032, 0.032, 0.1, 7), W.M.tin, canItems, { castShadow: false });
+
+  // glass bottles, most lying on their side
+  const bottleItems = [];
+  for (let i = 0; i < 22; i++) {
+    const s = spot(6);
+    if (!s) continue;
+    const lying = rnd() < 0.7;
+    bottleItems.push({
+      x: s[0], y: W.heightAt(s[0], s[1]) + (lying ? 0.03 : 0.085), z: s[1],
+      rx: lying ? Math.PI / 2 : 0, ry: rnd() * Math.PI,
+      color: new THREE.Color().setHSL(rnd() < 0.6 ? 0.36 : 0.08, 0.4, 0.25 + rnd() * 0.15)
+    });
+  }
+  makeInstanced(W, new THREE.CylinderGeometry(0.028, 0.032, 0.17, 7), W.M.painted, bottleItems, { castShadow: false });
+
+  // flattened plastic bags
+  const bagItems = [];
+  for (let i = 0; i < 26; i++) {
+    const s = spot(8);
+    if (!s) continue;
+    bagItems.push({
+      x: s[0], y: W.heightAt(s[0], s[1]) + 0.02, z: s[1],
+      ry: rnd() * Math.PI, sx: 1 + rnd(), sy: 0.35 + rnd() * 0.2, sz: 1 + rnd(),
+      color: new THREE.Color().setHSL(0.1, 0.05 + rnd() * 0.08, 0.55 + rnd() * 0.3)
+    });
+  }
+  makeInstanced(W, new THREE.IcosahedronGeometry(0.09, 0), W.M.rubber, bagItems, { castShadow: false });
+
+  // rubble clusters at breach points and damaged corners
+  const rubItems = [];
+  for (const [cx, cz] of [[0, 50.5], [-20, 44], [30, -26], [-16, -38]]) {
+    for (let i = 0; i < 30; i++) {
+      const a = rnd() * Math.PI * 2, rr = rnd() * 2.6;
+      const x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr;
+      if (!open(x, z)) continue;
+      const s = 0.4 + rnd() * 1.1;
+      rubItems.push({
+        x, y: W.heightAt(x, z) + 0.02, z, ry: rnd() * Math.PI,
+        sx: s, sy: s * (0.5 + rnd() * 0.4), sz: s,
+        color: new THREE.Color().setHSL(0.08, 0.1 + rnd() * 0.1, 0.34 + rnd() * 0.2)
+      });
+    }
+  }
+  makeInstanced(W, new THREE.IcosahedronGeometry(0.09, 0), W.M.rock, rubItems, { castShadow: false });
+
+  // loose boards
+  const boardGeo = new THREE.BoxGeometry(0.9, 0.025, 0.14);
+  ensureColor(boardGeo, 0.85);
+  scaleBoxUV(boardGeo, 0.9, 0.025, 0.14, UV_SCALE.planks);
+  const boardItems = [];
+  for (let i = 0; i < 22; i++) {
+    const s = spot(10);
+    if (!s) continue;
+    boardItems.push({
+      x: s[0], y: W.heightAt(s[0], s[1]) + 0.015, z: s[1],
+      ry: rnd() * Math.PI, rz: (rnd() - 0.5) * 0.2,
+      sx: 0.6 + rnd() * 0.9, sy: 1, sz: 0.7 + rnd() * 0.6
+    });
+  }
+  makeInstanced(W, boardGeo, W.M.planks, boardItems, { castShadow: false });
+
+  // bins/buckets, some tipped
+  const bucketItems = [];
+  for (const [x, z] of [[-14.5, 33], [24, 12], [4, 46], [-26, -12], [38, 27]]) {
+    const tipped = rnd() < 0.4;
+    bucketItems.push({
+      x, y: W.heightAt(x, z) + (tipped ? 0.11 : 0.12), z,
+      rz: tipped ? Math.PI / 2 * 0.9 : 0, ry: rnd() * Math.PI,
+      color: new THREE.Color().setHSL(0.55 + rnd() * 0.1, 0.25, 0.35 + rnd() * 0.15)
+    });
+  }
+  makeInstanced(W, new THREE.CylinderGeometry(0.13, 0.1, 0.24, 9), W.M.painted, bucketItems);
+
+  // tipped oil drums
+  const drumItems = [];
+  for (const [x, z] of [[-29.5, 11], [46.5, 27], [12, 47]]) {
+    drumItems.push({
+      x, y: W.heightAt(x, z) + 0.27, z,
+      rz: Math.PI / 2, ry: rnd() * Math.PI,
+      color: new THREE.Color().setHSL(0.05, 0.5, 0.3)
+    });
+  }
+  makeInstanced(W, new THREE.CylinderGeometry(0.27, 0.27, 0.85, 10), W.M.painted, drumItems);
+}
+
+// ---------------------------------------------------------------------------
 
 export const Builders = {
   buildPerimeter, buildMainBuilding, buildShed, buildCommsHut, buildWatchtower,
@@ -1612,5 +1752,5 @@ export const Builders = {
   buildBarriers, buildRocks, buildPebbles, buildDebris, buildGrass, buildDistant,
   buildBarracks, buildNEBlock, buildWestBlock, buildAnnex, buildUrbanDress,
   buildSEBlock, buildWarehouse, buildFuelDepot, buildNorthSheds,
-  buildCourtyardFill, buildSiteDress, buildShrubs, buildFarDress
+  buildCourtyardFill, buildSiteDress, buildShrubs, buildFarDress, buildStreetLitter
 };
