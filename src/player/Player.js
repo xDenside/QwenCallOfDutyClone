@@ -20,9 +20,9 @@ export class Player {
     this.recoilPitch = 0;
     this.recoilYaw = 0;
     this.ads = 0;
-    // hip-fire base sensitivity at baseFov; FOV-compensation keeps ADS on-screen
-    // turn rate identical. Tune live via game.player.sensBase in console.
-    this.sensBase = 0.0031;
+    // hip-fire look rate (ADS stays at 0.0021). Set fast so hip-fire never feels
+    // sluggish; tune live via game.player.sensBase in the console.
+    this.sensBase = 0.005;
     this.dead = false;
     this.timeSinceDamage = 99;
     this.respawnTimer = 0;
@@ -97,14 +97,12 @@ export class Player {
     game.camera.fov = THREE.MathUtils.damp(game.camera.fov, THREE.MathUtils.lerp(baseFov, adsFov, this.ads), 14, dt);
     game.camera.updateProjectionMatrix();
 
-    // FOV-compensated look: scale angular sensitivity by tan(fov/2) so the ON-SCREEN
-    // turn rate is identical in hip-fire and ADS. Without this, the wide hip-fire FOV
-    // makes a given mouse move sweep the view less, so hip-fire feels sluggish next to
-    // the zoomed-in ADS. sensBase is the hip-fire value at baseFov; tune live via
-    // game.player.sensBase.
-    const sens = this.sensBase *
-      Math.tan(THREE.MathUtils.degToRad(game.camera.fov * 0.5)) /
-      Math.tan(THREE.MathUtils.degToRad(baseFov * 0.5));
+    // Look sensitivity: keep ADS at its precise 0.0021 feel and make hip-fire the fast,
+    // loose mode. Interpolate by current FOV so the ADS transition is smooth. sensBase is
+    // the hip-fire rate; it more than offsets the wide hip-fire FOV (which otherwise makes
+    // hip-fire feel sluggish next to zoomed-in ADS). Tune live via game.player.sensBase.
+    const t = THREE.MathUtils.clamp((game.camera.fov - adsFov) / (baseFov - adsFov), 0, 1);
+    const sens = THREE.MathUtils.lerp(0.0021, this.sensBase, t);
     if (!game.debug.freeCam) {
       this.yaw -= dx * sens;
       this.pitch = THREE.MathUtils.clamp(this.pitch - dy * sens, -1.45, 1.45);
